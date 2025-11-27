@@ -1,0 +1,1446 @@
+import React, { useState, useEffect } from 'react';
+import { Bell, Plus, Check, X, Calendar, Phone, Mail, User, Clock, Settings, Users, Edit2, Trash2, Sun, Moon, Monitor, Search, Filter, AlertCircle, AlertTriangle, RefreshCw, WifiOff } from 'lucide-react';
+import useAPI from './hooks/useAPI';
+import useTheme from './hooks/useTheme';
+import useNotifications from './hooks/useNotifications';
+import useContacts from './hooks/useContacts';
+import ErrorBanner from './components/ErrorBanner';
+import {
+  DEFAULT_CIRCLES,
+  DEFAULT_SETTINGS,
+  filterContacts,
+  getOverdueContacts,
+  getBirthdayContacts
+} from './utils/constants';
+
+const ThreadApp = () => {
+  // Use custom hooks
+  const api = useAPI();
+  const theme = useTheme(DEFAULT_SETTINGS.theme);
+  const notifications = useNotifications();
+  const contactsHook = useContacts([]);
+
+  // Local state
+  const [circles, setCircles] = useState(DEFAULT_CIRCLES);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showCircleManager, setShowCircleManager] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCircle, setFilterCircle] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Initialize app on mount
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  // Handle theme changes
+  useEffect(() => {
+    theme.applyTheme(settings.theme);
+  }, [settings.theme, theme]);
+
+  // Check notifications every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      notifications.checkAndNotify(
+        settings,
+        contactsHook.contacts,
+        handleSaveData,
+        () => getBirthdayContacts(contactsHook.contacts),
+        () => getOverdueContacts(contactsHook.contacts, circles)
+      );
+    }, 60 * 1000);
+
+    notifications.checkAndNotify(
+      settings,
+      contactsHook.contacts,
+      handleSaveData,
+      () => getBirthdayContacts(contactsHook.contacts),
+      () => getOverdueContacts(contactsHook.contacts, circles)
+    );
+
+    return () => clearInterval(interval);
+  }, [settings, contactsHook.contacts, circles, notifications]);
+
+  // Handle online/offline status changes
+  useEffect(() => {
+    const handleOnline = () => {
+      api.setIsOnline(true);
+      api.dismissError();
+      loadInitialData();
+    };
+    const handleOffline = () => {
+      api.setIsOnline(false);
+      api.setError({
+        type: 'offline',
+        message: 'No internet connection',
+        details: 'Your changes will be saved when you\'re back online.',
+        troubleshooting: [
+          'Check your WiFi or mobile data connection',
+          'Make sure airplane mode is off'
+        ],
+        severity: 'warning',
+        canRetry: true
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Initialize app
+  const initializeApp = async () => {
+    notifications.checkNotificationPermission();
+    theme.applyTheme(settings.theme);
+    await loadInitialData();
+  };
+
+  // Load initial data from API
+  const loadInitialData = async () => {
+    const data = await api.loadData();
+    if (data) {
+      contactsHook.updateAllContacts(data.contacts || []);
+      setCircles(data.circles || DEFAULT_CIRCLES);
+      setSettings(data.settings || DEFAULT_SETTINGS);
+    }
+  };
+
+  // Wrapper for saveData that also updates local circles/settings
+  const handleSaveData = async (newContacts, newCircles, newSettings) => {
+    const dataToSave = {
+      contacts: newContacts || contactsHook.contacts,
+      circles: newCircles || circles,
+      settings: newSettings || settings
+    };
+
+    const result = await api.saveData(dataToSave);
+
+    if (result.success) {
+      if (newContacts) contactsHook.updateAllContacts(newContacts);
+      if (newCircles) setCircles(newCircles);
+      if (newSettings) setSettings(newSettings);
+    }
+
+    return result;
+  };
+
+  useEffect(() => {
+    loadData();
+    notifications.checkNotificationPermission();
+    theme.applyTheme(settings.theme);
+
+    // Monitor online/offline status
+    const handleOnline = () => {
+      api.setIsOnline(true);
+      api.dismissError();
+      loadData();
+    };
+    const handleOffline = () => {
+      api.setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Check every minute for notifications
+    const interval = setInterval(() => {
+      handleCheckNotifications();
+    }, 60 * 1000);
+
+    handleCheckNotifications();
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [settings.notificationTimes, settings.theme]);
+
+  // Load data from API
+  const loadData = async () => {
+    const data = await api.loadData();
+    if (data) {
+      contactsHook.updateAllContacts(data.contacts || []);
+      setCircles(data.circles || DEFAULT_CIRCLES);
+      setSettings(data.settings || DEFAULT_SETTINGS);
+    }
+  };
+
+  // Check and send notifications
+  const handleCheckNotifications = () => {
+    notifications.checkAndNotify(
+      settings,
+      contactsHook.contacts,
+      handleSaveData,
+      () => getBirthdayContacts(contactsHook.contacts),
+      () => getOverdueContacts(contactsHook.contacts, circles)
+    );
+  };
+
+  // Save data to API
+  const handleSaveData = async (newContacts, newCircles, newSettings) => {
+    const dataToSave = {
+      contacts: newContacts || contactsHook.contacts,
+      circles: newCircles || circles,
+      settings: newSettings || settings
+    };
+
+    await api.saveData(dataToSave);
+
+    if (newContacts) contactsHook.updateAllContacts(newContacts);
+    if (newCircles) setCircles(newCircles);
+    if (newSettings) setSettings(newSettings);
+  };
+
+  // ====== REMOVE ALL OLD CODE BELOW - REPLACING WITH HOOKS ======
+  // const loadData = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     setError(null);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch('/api/data', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setContacts(data.contacts || []);
+      setCircles(data.circles || getDefaultCircles());
+      setSettings(data.settings || { notificationTimes: ['09:00'], lastCheck: null, theme: 'auto' });
+      setRetryCount(0);
+      setError(null);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      
+      // Use default circles as fallback
+      setCircles(getDefaultCircles());
+      
+      // Set user-facing error with troubleshooting
+      if (error.name === 'AbortError') {
+        setError({
+          type: 'timeout',
+          message: 'Connection timeout',
+          details: 'The server took too long to respond.',
+          troubleshooting: [
+            'Check your internet connection',
+            'The server might be experiencing high load',
+            'Try refreshing the page'
+          ],
+          severity: 'error',
+          canRetry: true
+        });
+      } else if (!navigator.onLine) {
+        setError({
+          type: 'offline',
+          message: 'No internet connection',
+          details: 'You appear to be offline.',
+          troubleshooting: [
+            'Check your WiFi or mobile data connection',
+            'Make sure airplane mode is off',
+            'Your changes will be saved locally'
+          ],
+          severity: 'warning',
+          canRetry: true
+        });
+      } else if (error.message.includes('404')) {
+        setError({
+          type: 'not_found',
+          message: 'API endpoint not found',
+          details: 'The data endpoint could not be reached.',
+          troubleshooting: [
+            'Make sure the server is running',
+            'Check if the API path is correct',
+            'Contact support if the problem persists'
+          ],
+          severity: 'error',
+          canRetry: true
+        });
+      } else if (error.message.includes('500')) {
+        setError({
+          type: 'server_error',
+          message: 'Server error',
+          details: 'The server encountered an error.',
+          troubleshooting: [
+            'Wait a moment and try again',
+            'The server might be restarting',
+            'Check server logs for details'
+          ],
+          severity: 'error',
+          canRetry: true
+        });
+      } else {
+        setError({
+          type: 'unknown',
+          message: 'Failed to load data',
+          details: error.message || 'An unexpected error occurred.',
+          troubleshooting: [
+            'Refresh the page to try again',
+            'Clear your browser cache',
+            'Check browser console for details',
+            'Make sure the server is accessible'
+          ],
+          severity: 'error',
+          canRetry: true
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyTheme = () => {
+    let theme = settings.theme || 'auto';
+    
+    if (theme === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme = prefersDark ? 'dark' : 'light';
+    }
+    
+    setCurrentTheme(theme);
+    
+    // Apply theme to document
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const updateTheme = (newTheme) => {
+    const updatedSettings = { ...settings, theme: newTheme };
+    saveData(contacts, circles, updatedSettings);
+  };
+
+  const saveData = async (updatedContacts, updatedCircles, updatedSettings) => {
+    const data = {
+      contacts: updatedContacts || contacts,
+      circles: updatedCircles || circles,
+      settings: updatedSettings || settings
+    };
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to save: ${response.status} ${response.statusText}`);
+      }
+      
+      if (updatedContacts) setContacts(updatedContacts);
+      if (updatedCircles) setCircles(updatedCircles);
+      if (updatedSettings) setSettings(updatedSettings);
+      
+      // Clear any previous save errors
+      if (error && error.type === 'save_error') {
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error saving data:', err);
+      
+      // Still update local state so user doesn't lose changes
+      if (updatedContacts) setContacts(updatedContacts);
+      if (updatedCircles) setCircles(updatedCircles);
+      if (updatedSettings) setSettings(updatedSettings);
+      
+      // Show user-facing error
+      if (err.name === 'AbortError') {
+        setError({
+          type: 'save_error',
+          message: 'Save timeout',
+          details: 'Changes were saved locally but may not be synced to the server.',
+          troubleshooting: [
+            'Your changes are saved locally',
+            'Check your internet connection',
+            'Click retry to sync with server'
+          ],
+          severity: 'warning',
+          canRetry: true,
+          retryAction: () => saveData(updatedContacts, updatedCircles, updatedSettings)
+        });
+      } else if (!navigator.onLine) {
+        setError({
+          type: 'save_error',
+          message: 'Offline - changes saved locally',
+          details: 'Your changes will sync when you\'re back online.',
+          troubleshooting: [
+            'Changes are saved in your browser',
+            'Don\'t clear browser data',
+            'Will auto-sync when connection returns'
+          ],
+          severity: 'info',
+          canRetry: false
+        });
+      } else {
+        setError({
+          type: 'save_error',
+          message: 'Failed to save to server',
+          details: err.message || 'Changes are saved locally.',
+          troubleshooting: [
+            'Your changes are still visible locally',
+            'Try clicking retry to sync',
+            'Check if the server is running',
+            'Refresh page as a last resort'
+          ],
+          severity: 'warning',
+          canRetry: true,
+          retryAction: () => saveData(updatedContacts, updatedCircles, updatedSettings)
+        });
+      }
+    }
+  };
+
+  const getDefaultCircles = () => [
+    { id: 'family', name: 'Family', color: '#BF616A', reminderDays: 7 },
+    { id: 'close-friends', name: 'Close Friends', color: '#D08770', reminderDays: 14 },
+    { id: 'friends', name: 'Friends', color: '#A3BE8C', reminderDays: 30 },
+    { id: 'colleagues', name: 'Colleagues', color: '#5E81AC', reminderDays: 60 },
+    { id: 'acquaintances', name: 'Acquaintances', color: '#B48EAD', reminderDays: 90 }
+  ];
+
+  const checkNotificationPermission = () => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+    }
+  };
+
+  const checkAndNotify = () => {
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Check if current time matches any notification time exactly (within same minute)
+    const shouldNotify = settings.notificationTimes.some(time => {
+      return time === currentTime;
+    });
+
+    if (!shouldNotify) return;
+
+    // Check if already notified in the last 2 minutes to prevent duplicates
+    const lastCheck = settings.lastCheck ? new Date(settings.lastCheck) : null;
+    if (lastCheck && Math.abs(now - lastCheck) / (1000 * 60) < 2) {
+      return;
+    }
+
+    // Check for birthdays first
+    const birthdayContacts = getBirthdayContacts();
+    if (birthdayContacts.length > 0 && notificationPermission === 'granted') {
+      sendBirthdayNotification(birthdayContacts);
+    }
+
+    // Then check for overdue contacts
+    const overdueContacts = getOverdueContacts();
+    if (overdueContacts.length > 0 && notificationPermission === 'granted') {
+      sendBatchNotification(overdueContacts);
+    }
+
+    if (birthdayContacts.length > 0 || overdueContacts.length > 0) {
+      saveData(contacts, circles, { ...settings, lastCheck: now.toISOString() });
+    }
+  };
+
+  const sendBatchNotification = (overdueContacts) => {
+    const count = overdueContacts.length;
+    const names = overdueContacts.slice(0, 3).map(c => c.name).join(', ');
+    const more = count > 3 ? ` and ${count - 3} more` : '';
+    
+    new Notification('Thread Reminder', {
+      body: `Time to reach out to: ${names}${more}`,
+      icon: '/icon-192.png',
+      tag: 'thread-daily',
+      requireInteraction: true
+    });
+  };
+
+  const sendBirthdayNotification = (birthdayContacts) => {
+    const count = birthdayContacts.length;
+    const names = birthdayContacts.slice(0, 3).map(c => c.name).join(', ');
+    const more = count > 3 ? ` and ${count - 3} more` : '';
+    
+    new Notification('🎂 Birthday Reminder!', {
+      body: `${count === 1 ? 'It\'s' : 'Birthdays today:'} ${names}${more}`,
+      icon: '/icon-192.png',
+      tag: 'intouch-birthday',
+      requireInteraction: true,
+      vibrate: [200, 100, 200, 100, 200]
+    });
+  };
+
+  const getBirthdayContacts = () => {
+    const today = new Date();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+    
+    return contacts.filter(contact => {
+      if (!contact.birthday) return false;
+      const birthday = new Date(contact.birthday);
+      return birthday.getMonth() + 1 === todayMonth && birthday.getDate() === todayDay;
+    });
+  };
+
+  const getOverdueContacts = () => {
+    const now = new Date();
+    return contacts.filter(contact => {
+      if (!contact.lastContacted) return true;
+      const circle = circles.find(c => c.id === contact.circleId);
+      if (!circle) return false;
+      
+      const lastContact = new Date(contact.lastContacted);
+      const daysSince = Math.floor((now - lastContact) / (1000 * 60 * 60 * 24));
+      return daysSince >= circle.reminderDays;
+    });
+  };
+
+  const getDaysSinceContact = (contact) => {
+    if (!contact.lastContacted) return null;
+    const now = new Date();
+    const last = new Date(contact.lastContacted);
+    return Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  };
+
+  const isOverdue = (contact) => {
+    const circle = circles.find(c => c.id === contact.circleId);
+    if (!circle || !contact.lastContacted) return false;
+    const daysSince = getDaysSinceContact(contact);
+    return daysSince >= circle.reminderDays;
+  };
+
+  const addContact = async () => {
+    if (!newContact.name || !newContact.circleId) return;
+
+    const contact = {
+      id: Date.now().toString(),
+      ...newContact,
+      lastContacted: new Date().toISOString(),
+      createdAt: new Date().toISOString()
+    };
+
+    await saveData([...contacts, contact], circles, settings);
+    setNewContact({ name: '', phone: '', email: '', notes: '', circleId: null });
+    setShowAddContact(false);
+  };
+
+  const markContacted = async (contactId) => {
+    const updated = contacts.map(c => 
+      c.id === contactId ? { ...c, lastContacted: new Date().toISOString() } : c
+    );
+    await saveData(updated, circles, settings);
+  };
+
+  const deleteContact = async (contactId) => {
+    const updated = contacts.filter(c => c.id !== contactId);
+    await saveData(updated, circles, settings);
+  };
+
+  const addNotificationTime = () => {
+    if (settings.notificationTimes.length < 4) {
+      const updated = { ...settings, notificationTimes: [...settings.notificationTimes, '12:00'] };
+      saveData(contacts, circles, updated);
+    }
+  };
+
+  const updateNotificationTime = (index, value) => {
+    const updated = { ...settings };
+    updated.notificationTimes[index] = value;
+    saveData(contacts, circles, updated);
+  };
+
+  const removeNotificationTime = (index) => {
+    const updated = { ...settings };
+    updated.notificationTimes = updated.notificationTimes.filter((_, i) => i !== index);
+    saveData(contacts, circles, updated);
+  };
+
+  const updateCircle = async (circleId, updates) => {
+    const updated = circles.map(c => c.id === circleId ? { ...c, ...updates } : c);
+    await saveData(contacts, updated, settings);
+  };
+
+  const getCircleById = (id) => circles.find(c => c.id === id);
+
+  const isBirthdayToday = (contact) => {
+    if (!contact.birthday) return false;
+    const today = new Date();
+    const birthday = new Date(contact.birthday);
+    return birthday.getMonth() === today.getMonth() && birthday.getDate() === today.getDate();
+  };
+
+  const isBirthdayThisMonth = (contact) => {
+    if (!contact.birthday) return false;
+    const today = new Date();
+    const birthday = new Date(contact.birthday);
+    return birthday.getMonth() === today.getMonth();
+  };
+
+  const isRecentlyContacted = (contact) => {
+    if (!contact.lastContacted) return false;
+    const daysSince = getDaysSinceContact(contact);
+    const circle = circles.find(c => c.id === contact.circleId);
+    if (!circle) return false;
+    // Consider "recently contacted" as within 25% of the reminder interval
+    return daysSince <= circle.reminderDays * 0.25;
+  };
+
+  const getFilteredContacts = () => {
+    let filtered = [...contacts];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(contact => 
+        contact.name.toLowerCase().includes(query) ||
+        (contact.email && contact.email.toLowerCase().includes(query)) ||
+        (contact.phone && contact.phone.toLowerCase().includes(query)) ||
+        (contact.notes && contact.notes.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply circle filter
+    if (filterCircle) {
+      filtered = filtered.filter(contact => contact.circleId === filterCircle);
+    }
+
+    // Apply status filter
+    if (filterStatus === 'overdue') {
+      filtered = filtered.filter(contact => isOverdue(contact));
+    } else if (filterStatus === 'birthdays') {
+      filtered = filtered.filter(contact => isBirthdayThisMonth(contact));
+    } else if (filterStatus === 'recent') {
+      filtered = filtered.filter(contact => isRecentlyContacted(contact));
+    }
+
+    return filtered;
+  };
+
+  const getAge = (birthday) => {
+    if (!birthday) return null;
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatBirthday = (birthday) => {
+    if (!birthday) return null;
+    const date = new Date(birthday);
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  };
+
+  const overdueCount = getOverdueContacts().length;
+  const birthdayCount = getBirthdayContacts().length;
+  const filteredContacts = getFilteredContacts();
+  const hasActiveFilters = searchQuery.trim() || filterCircle || filterStatus !== 'all';
+
+  const dismissError = () => {
+    setError(null);
+  };
+
+  const retryLastAction = () => {
+    setRetryCount(retryCount + 1);
+    if (error && error.retryAction) {
+      error.retryAction();
+    } else {
+      loadData();
+    }
+  };
+
+  return (
+    <div className={`min-h-screen transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord0' : 'bg-nord6'}`} style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+          --nord0: #2E3440;
+          --nord1: #3B4252;
+          --nord2: #434C5E;
+          --nord3: #4C566A;
+          --nord4: #D8DEE9;
+          --nord5: #E5E9F0;
+          --nord6: #ECEFF4;
+          --nord7: #8FBCBB;
+          --nord8: #88C0D0;
+          --nord9: #81A1C1;
+          --nord10: #5E81AC;
+          --nord11: #BF616A;
+          --nord12: #D08770;
+          --nord13: #EBCB8B;
+          --nord14: #A3BE8C;
+          --nord15: #B48EAD;
+        }
+      `}</style>
+      {/* Header */}
+      <div className={`shadow-md sticky top-0 z-10 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-nord10 to-nord8 rounded-xl flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#BF616A' }}>
+                  <path d="M 7 9 Q 12 5, 17 9 Q 19 12, 17 15 Q 12 19, 7 15 Q 5 12, 7 9 Z" fill="none" stroke="currentColor"/>
+                  <circle cx="7" cy="9" r="1.5" fill="currentColor"/>
+                  <circle cx="17" cy="9" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className={`text-2xl font-bold ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Thread</h1>
+                <p className={`text-xs ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>Stay connected</p>
+              </div>
+            </div>
+            <div className="flex gap-2 items-center">
+              {!isOnline && (
+                <div className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2" style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(208, 135, 112, 0.2)' : 'rgba(208, 135, 112, 0.15)', color: '#D08770' }}>
+                  <WifiOff className="w-4 h-4" />
+                  Offline
+                </div>
+              )}
+              {birthdayCount > 0 && (
+                <div className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1" style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(180, 142, 173, 0.2)' : 'rgba(180, 142, 173, 0.15)', color: '#B48EAD' }}>
+                  🎂 {birthdayCount} birthday{birthdayCount > 1 ? 's' : ''}
+                </div>
+              )}
+              {overdueCount > 0 && (
+                <div className="px-3 py-2 rounded-lg text-sm font-semibold" style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(191, 97, 106, 0.2)' : 'rgba(191, 97, 106, 0.15)', color: '#BF616A' }}>
+                  {overdueCount} overdue
+                </div>
+              )}
+              {notificationPermission !== 'granted' && !error && (
+                <button
+                  onClick={requestNotificationPermission}
+                  className="px-4 py-2 rounded-lg text-sm hover:opacity-90 transition"
+                  style={{ backgroundColor: '#EBCB8B', color: '#2E3440' }}
+                >
+                  Enable Notifications
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowSettings(!showSettings);
+                  if (showSettings) {
+                    setShowCircleManager(false);
+                  }
+                }}
+                className={`p-2 rounded-lg transition ${currentTheme === 'dark' ? 'text-nord4 hover:bg-nord2' : 'text-nord3 hover:bg-nord5'}`}
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Error Notification Banner */}
+        {error && (
+          <div 
+            className={`mb-6 rounded-xl shadow-lg p-5 border-l-4 transition-all duration-200 ${
+              error.severity === 'error' 
+                ? currentTheme === 'dark' ? 'bg-nord1 border-nord11' : 'bg-red-50 border-nord11'
+                : error.severity === 'warning'
+                ? currentTheme === 'dark' ? 'bg-nord1 border-nord12' : 'bg-orange-50 border-nord12'
+                : currentTheme === 'dark' ? 'bg-nord1 border-nord8' : 'bg-blue-50 border-nord8'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                {error.severity === 'error' ? (
+                  <AlertCircle className="w-6 h-6" style={{ color: '#BF616A' }} />
+                ) : error.severity === 'warning' ? (
+                  <AlertTriangle className="w-6 h-6" style={{ color: '#D08770' }} />
+                ) : (
+                  <AlertCircle className="w-6 h-6" style={{ color: '#88C0D0' }} />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h3 className={`font-bold text-lg mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                  {error.message}
+                </h3>
+                <p className={`text-sm mb-3 ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                  {error.details}
+                </p>
+                
+                {error.troubleshooting && error.troubleshooting.length > 0 && (
+                  <div className={`mt-3 p-3 rounded-lg ${currentTheme === 'dark' ? 'bg-nord2' : 'bg-white'}`}>
+                    <p className={`text-sm font-semibold mb-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                      💡 Troubleshooting Tips:
+                    </p>
+                    <ul className={`text-sm space-y-1 ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                      {error.troubleshooting.map((tip, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-nord10 mt-0.5">•</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="flex gap-2 mt-4">
+                  {error.canRetry && (
+                    <button
+                      onClick={retryLastAction}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 text-white"
+                      style={{ backgroundColor: '#5E81AC' }}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Retry
+                    </button>
+                  )}
+                  <button
+                    onClick={dismissError}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                      currentTheme === 'dark' 
+                        ? 'bg-nord3 text-nord6 hover:bg-nord2' 
+                        : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+              
+              <button
+                onClick={dismissError}
+                className={`flex-shrink-0 p-1 rounded transition ${
+                  currentTheme === 'dark' ? 'text-nord4 hover:text-nord6' : 'text-nord3 hover:text-nord0'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && !error && (
+          <div className={`mb-6 rounded-xl shadow-lg p-8 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+            <div className="flex flex-col items-center justify-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-nord10 border-t-transparent"></div>
+              <p className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                Loading your contacts...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className={`mb-6 rounded-xl shadow-lg p-6 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+              <Settings className="w-5 h-5" />
+              Settings
+            </h2>
+            
+            <div className="space-y-6">
+              {/* Theme Selector */}
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                  Appearance
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => updateTheme('light')}
+                    className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                      settings.theme === 'light'
+                        ? 'border-nord10'
+                        : currentTheme === 'dark' ? 'border-nord3 hover:border-nord10' : 'border-nord4 hover:border-nord10'
+                    }`}
+                    style={{ backgroundColor: settings.theme === 'light' ? 'rgba(94, 129, 172, 0.1)' : 'transparent' }}
+                  >
+                    <Sun className={`w-5 h-5 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`} />
+                    <span className={`text-sm font-medium ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Light</span>
+                  </button>
+                  <button
+                    onClick={() => updateTheme('dark')}
+                    className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                      settings.theme === 'dark'
+                        ? 'border-nord10'
+                        : currentTheme === 'dark' ? 'border-nord3 hover:border-nord10' : 'border-nord4 hover:border-nord10'
+                    }`}
+                    style={{ backgroundColor: settings.theme === 'dark' ? 'rgba(94, 129, 172, 0.1)' : 'transparent' }}
+                  >
+                    <Moon className={`w-5 h-5 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`} />
+                    <span className={`text-sm font-medium ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Dark</span>
+                  </button>
+                  <button
+                    onClick={() => updateTheme('auto')}
+                    className={`p-3 rounded-lg border-2 transition flex flex-col items-center gap-2 ${
+                      settings.theme === 'auto'
+                        ? 'border-nord10'
+                        : currentTheme === 'dark' ? 'border-nord3 hover:border-nord10' : 'border-nord4 hover:border-nord10'
+                    }`}
+                    style={{ backgroundColor: settings.theme === 'auto' ? 'rgba(94, 129, 172, 0.1)' : 'transparent' }}
+                  >
+                    <Monitor className={`w-5 h-5 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`} />
+                    <span className={`text-sm font-medium ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Auto</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-semibold mb-3 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                  Notification Times (up to 4 per day)
+                </label>
+                {settings.notificationTimes.map((time, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => updateNotificationTime(index, e.target.value)}
+                      className={`px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                        currentTheme === 'dark' 
+                          ? 'border-nord3 bg-nord2 text-nord6' 
+                          : 'border-nord4 bg-white text-nord0'
+                      }`}
+                    />
+                    {settings.notificationTimes.length > 1 && (
+                      <button
+                        onClick={() => removeNotificationTime(index)}
+                        className="p-2 rounded-lg transition hover:bg-opacity-10"
+                        style={{ color: '#BF616A', backgroundColor: currentTheme === 'dark' ? 'rgba(191, 97, 106, 0.1)' : 'rgba(191, 97, 106, 0.05)' }}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {settings.notificationTimes.length < 4 && (
+                  <button
+                    onClick={addNotificationTime}
+                    className="mt-2 px-4 py-2 text-sm rounded-lg transition"
+                    style={{ color: '#5E81AC', backgroundColor: currentTheme === 'dark' ? 'rgba(94, 129, 172, 0.1)' : 'rgba(94, 129, 172, 0.05)' }}
+                  >
+                    + Add Time
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => setShowCircleManager(!showCircleManager)}
+                className="w-full px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                style={{ backgroundColor: currentTheme === 'dark' ? 'rgba(180, 142, 173, 0.2)' : 'rgba(180, 142, 173, 0.15)', color: '#B48EAD' }}
+              >
+                <Users className="w-5 h-5" />
+                {showCircleManager ? 'Hide' : 'Manage'} Circles
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Circle Manager */}
+        {showCircleManager && (
+          <div className={`mb-6 rounded-xl shadow-lg p-6 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+            <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+              <Users className="w-5 h-5" />
+              Contact Circles
+            </h2>
+            <div className="space-y-3">
+              {circles.map(circle => (
+                <div key={circle.id} className={`flex items-center gap-4 p-4 rounded-lg ${currentTheme === 'dark' ? 'bg-nord2' : 'bg-nord6'}`}>
+                  <div 
+                    className="w-8 h-8 rounded-full flex-shrink-0" 
+                    style={{ backgroundColor: circle.color }}
+                  />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>{circle.name}</div>
+                    <div className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                      {contacts.filter(c => c.circleId === circle.id).length} contacts
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={circle.reminderDays}
+                      onChange={(e) => updateCircle(circle.id, { reminderDays: parseInt(e.target.value) || 7 })}
+                      className={`w-20 px-3 py-1 border rounded text-sm ${
+                        currentTheme === 'dark' 
+                          ? 'border-nord3 bg-nord2 text-nord6' 
+                          : 'border-nord4 bg-white text-nord0'
+                      }`}
+                      min="1"
+                    />
+                    <span className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>days</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add Contact Button */}
+        {!showAddContact && (
+          <button
+            onClick={() => setShowAddContact(true)}
+            className="w-full mb-6 px-6 py-4 bg-gradient-to-r from-nord10 to-nord8 text-white rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2 shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            Add New Contact
+          </button>
+        )}
+
+        {/* Search and Filter Bar */}
+        <div className={`mb-6 rounded-xl shadow-lg p-4 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search contacts..."
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                  currentTheme === 'dark' 
+                    ? 'border-nord3 bg-nord2 text-nord6 placeholder-nord4' 
+                    : 'border-nord4 bg-white text-nord0 placeholder-nord3'
+                }`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${currentTheme === 'dark' ? 'text-nord4 hover:text-nord6' : 'text-nord3 hover:text-nord0'}`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Toggle Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                hasActiveFilters && !searchQuery.trim()
+                  ? 'bg-nord10 text-white'
+                  : currentTheme === 'dark' 
+                    ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                    : 'bg-nord5 text-nord0 hover:bg-nord4'
+              }`}
+            >
+              <Filter className="w-5 h-5" />
+              Filters
+              {hasActiveFilters && !searchQuery.trim() && (
+                <span className="w-2 h-2 bg-nord11 rounded-full"></span>
+              )}
+            </button>
+          </div>
+
+          {/* Filter Options */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: currentTheme === 'dark' ? 'var(--nord3)' : 'var(--nord4)' }}>
+              {/* Circle Filter */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                  Filter by Circle
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFilterCircle(null)}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                      !filterCircle
+                        ? 'bg-nord10 text-white'
+                        : currentTheme === 'dark' 
+                          ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                          : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    All Circles
+                  </button>
+                  {circles.map(circle => (
+                    <button
+                      key={circle.id}
+                      onClick={() => setFilterCircle(circle.id)}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-2 ${
+                        filterCircle === circle.id
+                          ? 'ring-2 ring-nord10'
+                          : currentTheme === 'dark' 
+                            ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                            : 'bg-nord5 text-nord0 hover:bg-nord4'
+                      }`}
+                    >
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: circle.color }}></div>
+                      {circle.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                  Filter by Status
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFilterStatus('all')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                      filterStatus === 'all'
+                        ? 'bg-nord10 text-white'
+                        : currentTheme === 'dark' 
+                          ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                          : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    All Contacts
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('overdue')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                      filterStatus === 'overdue'
+                        ? 'bg-nord11 text-white'
+                        : currentTheme === 'dark' 
+                          ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                          : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    Overdue ({overdueCount})
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('birthdays')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                      filterStatus === 'birthdays'
+                        ? 'bg-nord15 text-white'
+                        : currentTheme === 'dark' 
+                          ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                          : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    🎂 This Month
+                  </button>
+                  <button
+                    onClick={() => setFilterStatus('recent')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                      filterStatus === 'recent'
+                        ? 'bg-nord14 text-white'
+                        : currentTheme === 'dark' 
+                          ? 'bg-nord2 text-nord6 hover:bg-nord3' 
+                          : 'bg-nord5 text-nord0 hover:bg-nord4'
+                    }`}
+                  >
+                    Recently Contacted
+                  </button>
+                </div>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterCircle(null);
+                    setFilterStatus('all');
+                  }}
+                  className={`text-sm ${currentTheme === 'dark' ? 'text-nord8 hover:text-nord7' : 'text-nord10 hover:text-nord9'}`}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Add Contact Form */}
+        {showAddContact && (
+          <div className={`mb-6 rounded-xl shadow-lg p-6 transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+            <h2 className={`text-xl font-bold mb-4 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>New Contact</h2>
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Name *</label>
+                <input
+                  type="text"
+                  value={newContact.name}
+                  onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                    currentTheme === 'dark' 
+                      ? 'border-nord3 bg-nord2 text-nord6' 
+                      : 'border-nord4 bg-white text-nord0'
+                  }`}
+                  placeholder="John Doe"
+                />
+              </div>
+              
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Circle *</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {circles.map(circle => (
+                    <button
+                      key={circle.id}
+                      onClick={() => setNewContact({ ...newContact, circleId: circle.id })}
+                      className={`p-3 rounded-lg border-2 transition flex items-center gap-2 ${
+                        newContact.circleId === circle.id
+                          ? 'border-nord10'
+                          : currentTheme === 'dark' ? 'border-nord3 hover:border-nord10' : 'border-nord4 hover:border-nord10'
+                      }`}
+                      style={{ backgroundColor: newContact.circleId === circle.id ? 'rgba(94, 129, 172, 0.1)' : 'transparent' }}
+                    >
+                      <div 
+                        className="w-4 h-4 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: circle.color }}
+                      />
+                      <div className="text-left">
+                        <div className={`text-sm font-medium ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>{circle.name}</div>
+                        <div className={`text-xs ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>{circle.reminderDays}d</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Phone</label>
+                  <input
+                    type="tel"
+                    value={newContact.phone}
+                    onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                      currentTheme === 'dark' 
+                        ? 'border-nord3 bg-nord2 text-nord6' 
+                        : 'border-nord4 bg-white text-nord0'
+                    }`}
+                    placeholder="+1 234 567 8900"
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Email</label>
+                  <input
+                    type="email"
+                    value={newContact.email}
+                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                      currentTheme === 'dark' 
+                        ? 'border-nord3 bg-nord2 text-nord6' 
+                        : 'border-nord4 bg-white text-nord0'
+                    }`}
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Birthday</label>
+                <input
+                  type="date"
+                  value={newContact.birthday}
+                  onChange={(e) => setNewContact({ ...newContact, birthday: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                    currentTheme === 'dark' 
+                      ? 'border-nord3 bg-nord2 text-nord6' 
+                      : 'border-nord4 bg-white text-nord0'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>Notes</label>
+                <textarea
+                  value={newContact.notes}
+                  onChange={(e) => setNewContact({ ...newContact, notes: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-nord10 ${
+                    currentTheme === 'dark' 
+                      ? 'border-nord3 bg-nord2 text-nord6' 
+                      : 'border-nord4 bg-white text-nord0'
+                  }`}
+                  rows="3"
+                  placeholder="Add any notes about this contact..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={addContact}
+                  disabled={!newContact.name || !newContact.circleId}
+                  className="flex-1 px-6 py-3 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  style={{ backgroundColor: '#5E81AC' }}
+                >
+                  Add Contact
+                </button>
+                <button
+                  onClick={() => setShowAddContact(false)}
+                  className={`px-6 py-3 rounded-lg hover:opacity-90 transition ${
+                    currentTheme === 'dark' ? 'bg-nord3 text-nord6' : 'bg-nord4 text-nord0'
+                  }`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contacts by Circle */}
+        <div className="space-y-6">
+          {/* Filter Results Info */}
+          {hasActiveFilters && (
+            <div className={`rounded-lg p-4 ${currentTheme === 'dark' ? 'bg-nord2' : 'bg-nord5'}`}>
+              <p className={`text-sm ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                Showing <span className="font-bold">{filteredContacts.length}</span> of <span className="font-bold">{contacts.length}</span> contacts
+                {searchQuery && ` matching "${searchQuery}"`}
+              </p>
+            </div>
+          )}
+
+          {circles.map(circle => {
+            const circleContacts = filteredContacts.filter(c => c.circleId === circle.id);
+            if (circleContacts.length === 0) return null;
+
+            return (
+              <div key={circle.id}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div 
+                    className="w-6 h-6 rounded-full" 
+                    style={{ backgroundColor: circle.color }}
+                  />
+                  <h2 className={`text-lg font-bold ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                    {circle.name}
+                  </h2>
+                  <span className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                    ({circleContacts.length})
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {circleContacts.map(contact => {
+                    const daysSince = getDaysSinceContact(contact);
+                    const overdue = isOverdue(contact);
+                    const isBirthday = isBirthdayToday(contact);
+                    
+                    return (
+                      <div
+                        key={contact.id}
+                        className={`rounded-xl shadow-lg p-5 transition-colors duration-200 ${
+                          currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'
+                        }`}
+                        style={{
+                          border: isBirthday ? '2px solid #B48EAD' : overdue ? '2px solid #BF616A' : 'none'
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className={`text-lg font-bold mb-1 flex items-center gap-2 ${currentTheme === 'dark' ? 'text-nord6' : 'text-nord0'}`}>
+                              {contact.name}
+                              {isBirthday && <span className="text-2xl">🎂</span>}
+                            </h3>
+                            <div className={`space-y-1 text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>
+                              {contact.phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="w-3 h-3" />
+                                  {contact.phone}
+                                </div>
+                              )}
+                              {contact.email && (
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-3 h-3" />
+                                  {contact.email}
+                                </div>
+                              )}
+                              {contact.birthday && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-3 h-3" />
+                                  {formatBirthday(contact.birthday)}
+                                  {getAge(contact.birthday) && ` (${getAge(contact.birthday)} years old)`}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => deleteContact(contact.id)}
+                            className={`p-2 transition ${currentTheme === 'dark' ? 'text-nord4 hover:text-nord11' : 'text-nord3'}`}
+                            style={{ color: overdue || isBirthday ? '#BF616A' : undefined }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {contact.notes && (
+                          <p className={`text-sm mb-3 italic ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>{contact.notes}</p>
+                        )}
+
+                        <div className={`flex items-center justify-between pt-3 border-t ${currentTheme === 'dark' ? 'border-nord3' : 'border-nord4'}`}>
+                          <div className="text-sm">
+                            <span style={{ color: overdue ? '#BF616A' : undefined }} className={overdue ? 'font-semibold' : currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}>
+                              {daysSince === null ? 'Never contacted' : daysSince === 0 ? 'Today' : `${daysSince}d ago`}
+                            </span>
+                            <span className={`mx-1 ${currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}`}>•</span>
+                            <span className={currentTheme === 'dark' ? 'text-nord4' : 'text-nord3'}>Every {circle.reminderDays}d</span>
+                          </div>
+                          <button
+                            onClick={() => markContacted(contact.id)}
+                            className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm"
+                            style={{ backgroundColor: '#A3BE8C' }}
+                          >
+                            <Check className="w-4 h-4" />
+                            Contacted
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {contacts.length === 0 && (
+            <div className={`rounded-xl shadow-lg p-12 text-center transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+              <User className={`w-16 h-16 mx-auto mb-4 ${currentTheme === 'dark' ? 'text-nord4' : 'text-gray-400'}`} />
+              <p className={`text-lg mb-2 ${currentTheme === 'dark' ? 'text-nord5' : 'text-gray-500'}`}>No contacts yet</p>
+              <p className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-gray-400'}`}>Add your first contact to start staying in touch!</p>
+            </div>
+          )}
+
+          {contacts.length > 0 && filteredContacts.length === 0 && (
+            <div className={`rounded-xl shadow-lg p-12 text-center transition-colors duration-200 ${currentTheme === 'dark' ? 'bg-nord1' : 'bg-white'}`}>
+              <Search className={`w-16 h-16 mx-auto mb-4 ${currentTheme === 'dark' ? 'text-nord4' : 'text-gray-400'}`} />
+              <p className={`text-lg mb-2 ${currentTheme === 'dark' ? 'text-nord5' : 'text-gray-500'}`}>No contacts found</p>
+              <p className={`text-sm ${currentTheme === 'dark' ? 'text-nord4' : 'text-gray-400'}`}>Try adjusting your search or filters</p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterCircle(null);
+                  setFilterStatus('all');
+                }}
+                className="mt-4 px-4 py-2 rounded-lg transition"
+                style={{ backgroundColor: '#5E81AC', color: 'white' }}
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ThreadApp;
