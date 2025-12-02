@@ -1,5 +1,6 @@
 # Nudge PWA
 
+Nudge helps you stay connected to your beloved ones, even if you struggle to keep up the conversation! Simple reminders to contact the people around you, organized in a beautiful dashboard. 
 A minimal Progressive Web App with centralized storage for NAS deployment.
 
 ## Quick Start
