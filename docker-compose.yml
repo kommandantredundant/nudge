@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   nudge:
-    build: .
+    image: ghcr.io/kommandantredundant/nudge:latest
     ports:
       - "8765:8765"
     volumes:

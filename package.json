@@ -15,7 +15,8 @@
     "cors": "^2.8.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "lucide-react": "^0.263.1"
   },
   "devDependencies": {
     "concurrently": "^7.6.0"
