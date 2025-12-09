@@ -1,0 +1,15 @@
+{
+  "contacts": [
+    {
+      "id": "1765312410865",
+      "name": "Test User",
+      "email": "test@example.com",
+      "phone": "123-456-7890",
+      "circleId": "friends",
+      "lastContacted": "2025-12-09T20:33:30.865Z",
+      "createdAt": "2025-12-09T20:33:30.865Z"
+    }
+  ],
+  "circles": [],
+  "settings": {}
+}
