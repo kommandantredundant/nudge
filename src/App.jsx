@@ -16,7 +16,6 @@ import InstallPrompt from './components/pwa/InstallPrompt.jsx';
 import { CompactInstallButton } from './components/pwa/InstallButton.jsx';
 import AppSwitcher from './components/pwa/AppSwitcher.jsx';
 import { validateContact } from './utils/contactUtils.js';
-import './utils/testAppSwitching.js'; // Import test utilities
 
 // Settings Panel Component
 const SettingsPanel = ({ isVisible, onClose, onToggleCircleManager }) => {
