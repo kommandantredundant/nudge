@@ -113,6 +113,42 @@ const SettingsPanel = ({ isVisible, onClose, onToggleCircleManager }) => {
 // Circle Manager Component
 const CircleManager = ({ isVisible, circles, onUpdateCircle }) => {
   const { getContactsInCircle } = useContacts();
+  const [pendingChanges, setPendingChanges] = useState({});
+
+  const handleDaysChange = (circleId, newValue) => {
+    const circle = circles.find(c => c.id === circleId);
+    const currentValue = circle.reminderDays;
+    
+    if (newValue === currentValue) {
+      // If value is the same as original, remove pending change
+      setPendingChanges(prev => {
+        const newPending = { ...prev };
+        delete newPending[circleId];
+        return newPending;
+      });
+    } else {
+      // Track the pending change
+      setPendingChanges(prev => ({
+        ...prev,
+        [circleId]: newValue
+      }));
+    }
+  };
+
+  const handleCheckboxChange = (circleId, isChecked) => {
+    if (isChecked) {
+      // Save the pending change
+      const newValue = pendingChanges[circleId];
+      onUpdateCircle(circleId, { reminderDays: newValue });
+      
+      // Clear the pending change
+      setPendingChanges(prev => {
+        const newPending = { ...prev };
+        delete newPending[circleId];
+        return newPending;
+      });
+    }
+  };
 
   return isVisible ? (
     <div className="card mb-6 fade-in">
@@ -123,10 +159,13 @@ const CircleManager = ({ isVisible, circles, onUpdateCircle }) => {
       <div className="space-y-3">
         {circles.map(circle => {
           const contactCount = getContactsInCircle(circle.id).length;
+          const hasPendingChange = pendingChanges.hasOwnProperty(circle.id);
+          const displayValue = hasPendingChange ? pendingChanges[circle.id] : circle.reminderDays;
+          
           return (
             <div key={circle.id} className="circle-item">
-              <div 
-                className="circle-indicator" 
+              <div
+                className="circle-indicator"
                 style={{ backgroundColor: circle.color }}
               />
               <div className="circle-item-info">
@@ -136,14 +175,33 @@ const CircleManager = ({ isVisible, circles, onUpdateCircle }) => {
                 </div>
               </div>
               <div className="circle-item-settings">
-                <Input
-                  type="number"
-                  value={circle.reminderDays}
-                  onChange={(e) => onUpdateCircle(circle.id, { reminderDays: parseInt(e.target.value) || 7 })}
-                  className="circle-days-input"
-                  min="1"
-                />
-                <span className="text-sm">days</span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={displayValue}
+                    onChange={(e) => handleDaysChange(circle.id, parseInt(e.target.value) || 7)}
+                    className="circle-days-input"
+                    min="1"
+                  />
+                  <span className="text-sm">days</span>
+                  {hasPendingChange && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        id={`save-${circle.id}`}
+                        onChange={(e) => handleCheckboxChange(circle.id, e.target.checked)}
+                        className="circle-save-checkbox"
+                      />
+                      <label
+                        htmlFor={`save-${circle.id}`}
+                        className="text-xs cursor-pointer"
+                        style={{ color: 'var(--color-primary)' }}
+                      >
+                        Save
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );

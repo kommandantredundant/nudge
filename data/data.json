@@ -10,6 +10,43 @@
       "createdAt": "2025-12-09T20:33:30.865Z"
     }
   ],
-  "circles": [],
-  "settings": {}
+  "circles": [
+    {
+      "id": "family",
+      "name": "Family",
+      "color": "#BF616A",
+      "reminderDays": 7
+    },
+    {
+      "id": "close-friends",
+      "name": "Close Friends",
+      "color": "#D08770",
+      "reminderDays": 14
+    },
+    {
+      "id": "friends",
+      "name": "Friends",
+      "color": "#A3BE8C",
+      "reminderDays": 30
+    },
+    {
+      "id": "colleagues",
+      "name": "Colleagues",
+      "color": "#5E81AC",
+      "reminderDays": 60
+    },
+    {
+      "id": "acquaintances",
+      "name": "Acquaintances",
+      "color": "#B48EAD",
+      "reminderDays": 90
+    }
+  ],
+  "settings": {
+    "notificationTimes": [
+      "09:00"
+    ],
+    "lastCheck": null,
+    "theme": "auto"
+  }
 }

@@ -63,3 +63,5 @@ docker-compose.yml
 # Temporary files
 *.tmp
 *.temp
+
+known-erros.md

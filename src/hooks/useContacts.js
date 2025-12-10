@@ -18,6 +18,7 @@ export const useContacts = () => {
     updateContact,
     deleteContact,
     markContacted,
+    updateCircle,
     loading,
     error
   } = useApp();
@@ -121,6 +122,7 @@ export const useContacts = () => {
     updateContact: updateExistingContact,
     deleteContact: removeContact,
     markContacted: markAsContacted,
+    updateCircle,
     
     // Utility methods
     getContactsInCircle,

@@ -315,3 +315,68 @@ a:hover {
   .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Circle Manager Styles */
+.circle-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-secondary);
+  transition: background-color var(--transition-normal);
+}
+
+.circle-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.circle-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.circle-indicator.small {
+  width: 8px;
+  height: 8px;
+}
+
+.circle-item-info {
+  flex: 1;
+}
+
+.circle-item-name {
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+}
+
+.circle-item-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.circle-item-settings {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.circle-days-input {
+  width: 60px;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.circle-save-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.circle-save-checkbox:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
