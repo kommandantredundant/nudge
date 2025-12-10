@@ -380,3 +380,39 @@ a:hover {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
+
+/* Header styles */
+.header {
+  background-color: var(--bg-primary);
+  box-shadow: 0 2px 4px var(--shadow-light);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  max-width: 100%;
+}
+
+.notification-badge {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.notification-badge.birthday {
+  background-color: var(--color-warning);
+  color: var(--nord0);
+}
+
+.notification-badge.overdue {
+  background-color: var(--color-error);
+  color: white;
+}

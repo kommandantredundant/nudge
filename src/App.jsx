@@ -545,6 +545,7 @@ const AppContent = () => {
         onSettingsToggle={handleSettingsToggle}
         showSettings={showSettings}
         environmentConfig={appEnvironmentConfig}
+        onAddContact={() => setShowAddContact(true)}
       />
 
       {/* App Switcher - Banner */}
@@ -590,17 +591,7 @@ const AppContent = () => {
         />
 
         {!showAddContact && (
-          <div className="flex gap-3 mb-6">
-            <Button
-              variant="primary"
-              onClick={() => setShowAddContact(true)}
-              className="flex-1"
-              size="lg"
-            >
-              <Plus className="w-5 h-5" />
-              Add New Contact
-            </Button>
-            
+          <div className="flex gap-3 mb-6 justify-end">
             {/* Compact Install Button */}
             <CompactInstallButton
               onInstall={handlePWAInstall}

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Settings, Bell, Smartphone, Monitor } from 'lucide-react';
+import { Settings, Bell, Plus, Smartphone, Monitor } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useNotifications } from '../../hooks/useNotifications.js';
 import Button from '../common/Button.jsx';
 
-const Header = ({ onSettingsToggle, showSettings, environmentConfig }) => {
+const Header = ({ onSettingsToggle, showSettings, environmentConfig, onAddContact }) => {
   const { currentTheme } = useTheme();
   const { 
     notificationCounts, 
@@ -26,14 +26,14 @@ const Header = ({ onSettingsToggle, showSettings, environmentConfig }) => {
       <div className="header-content">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-nord10 to-nord8 rounded-xl flex items-center justify-center">
-            <svg 
-              viewBox="0 0 24 24" 
-              className="w-6 h-6" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
+            <svg
+              viewBox="0 0 24 24"
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{ color: '#BF616A' }}
             >
               <path d="M 7 9 Q 12 5, 17 9 Q 19 12, 17 15 Q 12 19, 7 15 Q 5 12, 7 9 Z" fill="none" stroke="currentColor"/>
@@ -70,7 +70,7 @@ const Header = ({ onSettingsToggle, showSettings, environmentConfig }) => {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {/* Birthday notifications */}
           {notificationCounts.birthdays > 0 && (
             <div className="notification-badge birthday">
@@ -98,6 +98,17 @@ const Header = ({ onSettingsToggle, showSettings, environmentConfig }) => {
               Enable Notifications
             </Button>
           )}
+          
+          {/* Add Contact button */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={onAddContact}
+            className="px-3 py-2"
+            aria-label="Add Contact"
+          >
+            <Plus className="w-5 h-5" />
+          </Button>
           
           {/* Settings button */}
           <Button
