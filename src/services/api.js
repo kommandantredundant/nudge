@@ -2,7 +2,7 @@
  * API service for handling all RESTful API calls
  */
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8765';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? window.location.origin : 'http://localhost:8765';
 
 class ApiService {
   constructor() {

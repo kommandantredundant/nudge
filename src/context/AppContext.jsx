@@ -42,7 +42,6 @@ export const AppProvider = ({ children }) => {
         ]);
       } catch (apiError) {
         // Fallback to legacy API if new API fails
-        console.warn('New API failed, falling back to legacy API:', apiError.message);
         const legacyData = await apiService.getData();
         contactsData = legacyData.contacts || [];
         circlesData = legacyData.circles || getDefaultCircles();
@@ -58,7 +57,7 @@ export const AppProvider = ({ children }) => {
       setNotificationPermission(permission);
       
     } catch (err) {
-      console.error('Error loading data:', err);
+      console.error('AppContext: Error loading data:', err);
       setError(err.message);
       
       // Set default data on error
