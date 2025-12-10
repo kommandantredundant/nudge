@@ -1,10 +1,10 @@
 import React from 'react';
-import { Settings, Bell } from 'lucide-react';
+import { Settings, Bell, Smartphone, Monitor } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { useNotifications } from '../../hooks/useNotifications.js';
 import Button from '../common/Button.jsx';
 
-const Header = ({ onSettingsToggle, showSettings }) => {
+const Header = ({ onSettingsToggle, showSettings, environmentConfig }) => {
   const { currentTheme } = useTheme();
   const { 
     notificationCounts, 
@@ -43,9 +43,27 @@ const Header = ({ onSettingsToggle, showSettings }) => {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              Nudge
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                Nudge
+              </h1>
+              {environmentConfig && (
+                <div className="flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                  {environmentConfig.isStandalone ? (
+                    <>
+                      {environmentConfig.platform === 'ios' || environmentConfig.platform === 'android' ? (
+                        <Smartphone size={14} />
+                      ) : (
+                        <Monitor size={14} />
+                      )}
+                      <span className="text-xs">App</span>
+                    </>
+                  ) : (
+                    <span className="text-xs">Web</span>
+                  )}
+                </div>
+              )}
+            </div>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
               Stay connected
             </p>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, User, Settings, Users } from 'lucide-react';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { AppProvider } from './context/AppContext.jsx';
@@ -6,11 +6,17 @@ import { useTheme } from './context/ThemeContext.jsx';
 import { useContacts } from './hooks/useContacts.js';
 import { useSettings } from './hooks/useSettings.js';
 import { useNotifications } from './hooks/useNotifications.js';
+import { useAppSwitching } from './hooks/useAppSwitching.js';
+import { appEnvironment } from './utils/appEnvironment.js';
 import Header from './components/layout/Header.jsx';
 import ContactCard from './components/contacts/ContactCard.jsx';
 import Button from './components/common/Button.jsx';
 import Input from './components/common/Input.jsx';
+import InstallPrompt from './components/pwa/InstallPrompt.jsx';
+import { CompactInstallButton } from './components/pwa/InstallButton.jsx';
+import AppSwitcher from './components/pwa/AppSwitcher.jsx';
 import { validateContact } from './utils/contactUtils.js';
+import './utils/testAppSwitching.js'; // Import test utilities
 
 // Settings Panel Component
 const SettingsPanel = ({ isVisible, onClose, onToggleCircleManager }) => {
@@ -379,6 +385,7 @@ const AppContent = () => {
   const [showCircleManager, setShowCircleManager] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [removingContacts, setRemovingContacts] = useState(new Set());
+  const [appEnvironmentConfig, setAppEnvironmentConfig] = useState(null);
 
   const {
     contacts,
@@ -393,6 +400,96 @@ const AppContent = () => {
   } = useContacts();
 
   const { currentTheme } = useTheme();
+  
+  // App switching hook
+  const {
+    switchingState,
+    canSwitch,
+    environmentConfig,
+    processDeepLinkQueue,
+    updateUserPreferences,
+    shouldShowSwitchPrompt
+  } = useAppSwitching();
+
+  // Initialize app environment
+  useEffect(() => {
+    const config = appEnvironment.getEnvironmentConfig();
+    setAppEnvironmentConfig(config);
+    
+    // Log environment info for debugging
+    console.log('App Environment:', config);
+    
+    // Track app environment for analytics
+    if (window.gtag) {
+      window.gtag('event', 'app_environment_detected', {
+        environment: config.environment,
+        platform: config.platform,
+        browser: config.browser,
+        isStandalone: config.isStandalone
+      });
+    }
+  }, []);
+
+  // Handle service worker messages for app switching
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type) {
+        switch (event.data.type) {
+          case 'DEEP_LINK_RECEIVED':
+            console.log('Deep link received:', event.data.data);
+            // Handle deep link navigation
+            if (event.data.data && event.data.data.path) {
+              // Navigate to the deep link path
+              window.history.pushState({}, '', event.data.data.path);
+            }
+            break;
+            
+          case 'APP_SWITCH_COMPLETED':
+            console.log('App switch completed:', event.data.data);
+            // Track successful app switch
+            if (window.gtag) {
+              window.gtag('event', 'app_switch_completed', event.data.data);
+            }
+            break;
+            
+          case 'APP_SWITCH_FAILED':
+            console.log('App switch failed:', event.data.data);
+            // Track failed app switch
+            if (window.gtag) {
+              window.gtag('event', 'app_switch_failed', event.data.data);
+            }
+            break;
+        }
+      }
+    };
+
+    // Listen for messages from service worker
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  // Process deep links on component mount
+  useEffect(() => {
+    const latestLink = processDeepLinkQueue();
+    if (latestLink) {
+      console.log('Processing deep link:', latestLink);
+      // You could trigger navigation or other actions here
+    }
+  }, [processDeepLinkQueue]);
+
+  // PWA Installation handlers
+  const handlePWAInstall = (result) => {
+    console.log('PWA installation result:', result);
+    // You could show a success message or update UI here
+  };
+
+  const handlePWADismiss = () => {
+    console.log('PWA install prompt dismissed');
+    // Track dismissal for analytics if needed
+  };
 
   const handleSettingsToggle = () => {
     setShowSettings(!showSettings);
@@ -445,9 +542,39 @@ const AppContent = () => {
 
   return (
     <div className="app-container">
-      <Header 
+      <Header
         onSettingsToggle={handleSettingsToggle}
         showSettings={showSettings}
+        environmentConfig={appEnvironmentConfig}
+      />
+
+      {/* App Switcher - Banner */}
+      {shouldShowSwitchPrompt() && (
+        <AppSwitcher
+          mode="banner"
+          onSwitch={(result) => {
+            console.log('App switched:', result);
+            if (window.gtag) {
+              window.gtag('event', 'app_switch_initiated', {
+                success: result.success,
+                platform: appEnvironmentConfig?.platform
+              });
+            }
+          }}
+          onDismiss={() => {
+            console.log('App switch dismissed');
+            updateUserPreferences({
+              lastDismissed: new Date().toISOString()
+            });
+          }}
+        />
+      )}
+
+      {/* PWA Install Prompt - Banner */}
+      <InstallPrompt
+        mode="banner"
+        onInstall={handlePWAInstall}
+        onDismiss={handlePWADismiss}
       />
 
       <div className="main-content">
@@ -464,15 +591,23 @@ const AppContent = () => {
         />
 
         {!showAddContact && (
-          <Button
-            variant="primary"
-            onClick={() => setShowAddContact(true)}
-            className="w-full mb-6"
-            size="lg"
-          >
-            <Plus className="w-5 h-5" />
-            Add New Contact
-          </Button>
+          <div className="flex gap-3 mb-6">
+            <Button
+              variant="primary"
+              onClick={() => setShowAddContact(true)}
+              className="flex-1"
+              size="lg"
+            >
+              <Plus className="w-5 h-5" />
+              Add New Contact
+            </Button>
+            
+            {/* Compact Install Button */}
+            <CompactInstallButton
+              onInstall={handlePWAInstall}
+              onInstallComplete={handlePWAInstall}
+            />
+          </div>
         )}
 
         <AddContactForm
@@ -533,6 +668,32 @@ const AppContent = () => {
             <p className="empty-state-description">
               Add your first contact to start staying in touch!
             </p>
+            
+            {/* Inline Install Prompt for Empty State */}
+            <div className="mt-6">
+              <InstallPrompt
+                mode="inline"
+                autoShow={true}
+                delay={1000}
+                onInstall={handlePWAInstall}
+                onDismiss={handlePWADismiss}
+              />
+              
+              {/* Inline App Switcher for Empty State */}
+              {shouldShowSwitchPrompt() && (
+                <div className="mt-4">
+                  <AppSwitcher
+                    mode="inline"
+                    onSwitch={(result) => {
+                      console.log('App switched from empty state:', result);
+                    }}
+                    onDismiss={() => {
+                      console.log('App switch dismissed from empty state');
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

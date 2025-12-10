@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline - Nudge</title>
+    <style>
+      :root {
+        --primary-color: #5E81AC;
+        --background-color: #ECEFF4;
+        --text-color: #2E3440;
+        --error-color: #BF616A;
+        --success-color: #A3BE8C;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .container {
+        max-width: 500px;
+        width: 100%;
+      }
+
+      .icon {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 30px;
+        opacity: 0.3;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+        color: var(--text-color);
+      }
+
+      p {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        color: var(--text-color);
+        opacity: 0.8;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background-color: var(--error-color);
+        color: white;
+        border-radius: 25px;
+        font-weight: 500;
+        margin-bottom: 30px;
+      }
+
+      .status.online {
+        background-color: var(--success-color);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: currentColor;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .retry-button {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        font-size: 1rem;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+      }
+
+      .retry-button:hover {
+        background-color: #4C6FA8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(94, 129, 172, 0.3);
+      }
+
+      .retry-button:active {
+        transform: translateY(0);
+      }
+
+      .info {
+        margin-top: 40px;
+        padding: 20px;
+        background-color: rgba(94, 129, 172, 0.1);
+        border-radius: 10px;
+        border-left: 4px solid var(--primary-color);
+      }
+
+      .info h3 {
+        margin-bottom: 10px;
+        color: var(--primary-color);
+      }
+
+      .info ul {
+        list-style: none;
+        text-align: left;
+      }
+
+      .info li {
+        margin-bottom: 8px;
+        padding-left: 20px;
+        position: relative;
+      }
+
+      .info li:before {
+        content: "•";
+        color: var(--primary-color);
+        position: absolute;
+        left: 0;
+      }
+
+      @media (max-width: 480px) {
+        h1 {
+          font-size: 2rem;
+        }
+
+        p {
+          font-size: 1rem;
+        }
+
+        .icon {
+          width: 80px;
+          height: 80px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M1 1L23 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16.72 11.06C16.5 8.93 15.38 7.06 13.72 5.84C13.27 5.52 12.79 5.25 12.28 5.04C10.88 4.48 9.28 4.48 7.88 5.04C7.37 5.25 6.89 5.52 6.44 5.84C4.78 7.06 3.66 8.93 3.44 11.06C3.16 13.73 4.23 16.16 6.06 17.78C6.51 18.18 7.02 18.52 7.57 18.78C8.97 19.44 10.63 19.44 12.03 18.78C12.58 18.52 13.09 18.18 13.54 17.78C15.37 16.16 16.44 13.73 16.72 11.06Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+
+      <h1>You're Offline</h1>
+      
+      <div class="status" id="connection-status">
+        <span class="status-dot"></span>
+        <span id="status-text">No Internet Connection</span>
+      </div>
+
+      <p>
+        It looks like you've lost your internet connection. Some features may not be available until you're back online.
+      </p>
+
+      <button class="retry-button" onclick="window.location.reload()">
+        Try Again
+      </button>
+
+      <div class="info">
+        <h3>What you can do offline:</h3>
+        <ul>
+          <li>View previously loaded contacts</li>
+          <li>Browse cached content</li>
+          <li>Access your local settings</li>
+          <li>Changes will sync when you're back online</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      // Check connection status periodically
+      function updateConnectionStatus() {
+        const statusElement = document.getElementById('connection-status');
+        const statusText = document.getElementById('status-text');
+        
+        if (navigator.onLine) {
+          statusElement.classList.add('online');
+          statusText.textContent = 'Connection Restored';
+          
+          // Redirect to main app after a short delay
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
+        } else {
+          statusElement.classList.remove('online');
+          statusText.textContent = 'No Internet Connection';
+        }
+      }
+
+      // Listen for online/offline events
+      window.addEventListener('online', updateConnectionStatus);
+      window.addEventListener('offline', updateConnectionStatus);
+
+      // Initial status check
+      updateConnectionStatus();
+
+      // Check status every 5 seconds
+      setInterval(updateConnectionStatus, 5000);
+    </script>
+  </body>
+</html>

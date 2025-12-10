@@ -1,0 +1,586 @@
+/* App Switcher Component Styles */
+
+.app-switcher {
+  --primary-color: #5E81AC;
+  --secondary-color: #88C0D0;
+  --background-color: #ECEFF4;
+  --text-color: #2E3440;
+  --text-secondary: #4C566A;
+  --border-color: #D8DEE9;
+  --error-color: #BF616A;
+  --success-color: #A3BE8C;
+  --warning-color: #EBCB8B;
+  
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+/* Banner Mode */
+.app-switcher.banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  z-index: 1000;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease-out;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.app-switcher.banner.visible {
+  transform: translateY(0);
+}
+
+.app-switcher.banner .app-switcher-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.app-switcher.banner .app-switcher-icon {
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.app-switcher.banner .app-switcher-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-switcher.banner .app-switcher-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.app-switcher.banner .app-switcher-description {
+  font-size: 12px;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-switcher.banner .app-switcher-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.app-switcher.banner .app-switcher-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.app-switcher.banner .app-switcher-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.app-switcher.banner .app-switcher-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.app-switcher.banner .app-switcher-dismiss {
+  background: transparent;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.app-switcher.banner .app-switcher-dismiss:hover {
+  opacity: 1;
+}
+
+/* Modal Mode */
+.app-switcher.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.app-switcher.modal.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-switcher.modal .app-switcher-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.app-switcher.modal .app-switcher-dialog {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.app-switcher.modal.visible .app-switcher-dialog {
+  transform: scale(1) translateY(0);
+}
+
+.app-switcher.modal .app-switcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0;
+}
+
+.app-switcher.modal .app-switcher-icon.large {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.app-switcher.modal .app-switcher-close {
+  background: var(--border-color);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.app-switcher.modal .app-switcher-close:hover {
+  background: var(--text-secondary);
+  color: white;
+}
+
+.app-switcher.modal .app-switcher-body {
+  padding: 0 24px 24px;
+  text-align: center;
+}
+
+.app-switcher.modal .app-switcher-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0 0 12px;
+}
+
+.app-switcher.modal .app-switcher-description {
+  color: var(--text-secondary);
+  font-size: 16px;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.app-switcher.modal .app-switcher-benefits {
+  text-align: left;
+  margin: 24px 0;
+}
+
+.app-switcher.modal .app-switcher-benefits h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 12px;
+}
+
+.app-switcher.modal .app-switcher-benefits ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.app-switcher.modal .app-switcher-benefits li {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.app-switcher.modal .benefit-icon {
+  color: var(--success-color);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.app-switcher.modal .app-switcher-deep-link {
+  background: var(--background-color);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 16px;
+}
+
+.app-switcher.modal .app-switcher-footer {
+  padding: 16px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-switcher.modal .app-switcher-button.primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-switcher.modal .app-switcher-button.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(94, 129, 172, 0.3);
+}
+
+.app-switcher.modal .app-switcher-button.primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.app-switcher.modal .app-switcher-secondary-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-switcher.modal .app-switcher-settings {
+  background: transparent;
+  color: var(--primary-color);
+  border: none;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.app-switcher.modal .app-switcher-settings:hover {
+  opacity: 0.8;
+}
+
+.app-switcher.modal .app-switcher-dismiss {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.app-switcher.modal .app-switcher-dismiss:hover {
+  color: var(--text-color);
+}
+
+/* Inline Mode */
+.app-switcher.inline {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.app-switcher.inline .app-switcher-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-switcher.inline .app-switcher-info {
+  flex: 1;
+}
+
+.app-switcher.inline .app-switcher-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+}
+
+.app-switcher.inline .app-switcher-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.app-switcher.inline .app-switcher-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.app-switcher.inline .app-switcher-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.app-switcher.inline .app-switcher-button:hover:not(:disabled) {
+  background: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+.app-switcher.inline .app-switcher-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.app-switcher.inline .app-switcher-dismiss {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-switcher.inline .app-switcher-dismiss:hover {
+  background: var(--background-color);
+  border-color: var(--text-secondary);
+}
+
+/* Settings Panel */
+.app-switcher-settings-panel {
+  background: var(--background-color);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.app-switcher-settings-panel h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 8px;
+}
+
+.app-switcher-settings-panel .setting-item {
+  margin-bottom: 8px;
+}
+
+.app-switcher-settings-panel label {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.app-switcher-settings-panel input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.app-switcher-settings-panel .switch-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.app-switcher-settings-panel .switch-stats p {
+  margin: 2px 0;
+}
+
+/* Error States */
+.app-switcher-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(191, 97, 106, 0.1);
+  color: var(--error-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Loading States */
+.app-switcher-button.switching {
+  position: relative;
+  color: transparent;
+}
+
+.app-switcher-button.switching::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinner.small {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-switcher.banner .app-switcher-content {
+    padding: 10px 12px;
+  }
+  
+  .app-switcher.banner .app-switcher-title {
+    font-size: 13px;
+  }
+  
+  .app-switcher.banner .app-switcher-description {
+    font-size: 11px;
+  }
+  
+  .app-switcher.modal .app-switcher-dialog {
+    width: 95%;
+    margin: 16px;
+  }
+  
+  .app-switcher.modal .app-switcher-body,
+  .app-switcher.modal .app-switcher-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  
+  .app-switcher.inline .app-switcher-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .app-switcher.inline .app-switcher-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+  .app-switcher {
+    --background-color: #2E3440;
+    --text-color: #ECEFF4;
+    --text-secondary: #D8DEE9;
+    --border-color: #4C566A;
+  }
+  
+  .app-switcher.modal .app-switcher-dialog {
+    background: #3B4252;
+  }
+  
+  .app-switcher.inline {
+    background: #3B4252;
+  }
+  
+  .app-switcher-settings-panel {
+    background: #434C5E;
+  }
+}
+
+/* Accessibility */
+.app-switcher-button:focus,
+.app-switcher-dismiss:focus,
+.app-switcher-settings:focus,
+.app-switcher-close:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .app-switcher,
+  .app-switcher-button,
+  .app-switcher-dismiss,
+  .app-switcher-settings,
+  .app-switcher-close {
+    transition: none;
+  }
+  
+  .spinner {
+    animation: none;
+  }
+}
